@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Store securely in .env
+const JWT_SECRET = process.env.JWT_SECRET || 'my_super_secret_key'; // Store securely in .env
 
 export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 10;

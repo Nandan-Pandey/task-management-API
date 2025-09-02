@@ -1,31 +1,33 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import connectDB from './config/db';
-import authRoutes from './routes/authRoutes';
-import taskRoutes from './routes/taskRoutes'
+  import express from 'express';
+  import cors from 'cors';
+  import dotenv from 'dotenv';
+  import connectDB from './config/db';
+  import authRoutes from './routes/authRoutes';
+  import taskRoutes from './routes/taskRoutes'
+import authMiddleware from './config/authmiddleware';
+ 
 
 
-const app = express();
-dotenv.config();
-app.use(cors());
-app.use(express.json());
-// Set the port number for the server
+  const app = express();
+  dotenv.config();
+  app.use(cors());
+  app.use(express.json());
+  // Set the port number for the server
 
 
-app.use('/auth', authRoutes);
-app.use('/tasks', taskRoutes);
+  app.use('/auth', authRoutes);
+  app.use('/tasks',authMiddleware, taskRoutes);
 
 
-const PORT = process.env.PORT || 5000;
+  const PORT = process.env.PORT || 5000;
 
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((err:any) => {
+      console.error('MongoDB connection failed:', err);
+      process.exit(1);
     });
-  })
-  .catch((err:any) => {
-    console.error('MongoDB connection failed:', err);
-    process.exit(1);
-  });

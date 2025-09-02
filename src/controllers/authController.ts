@@ -2,26 +2,23 @@ import type { Request, Response } from 'express';
 import { getAllEmployeesService, loginUser } from '../services/authService';
 
 
-interface LoginRequestBody {
-  email: string;
-  password: string;
-}
 
-export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
+
+export const login = async (req: any,  res: any) => {
   try {
     const { email, password } = req.body;
-    const data = await loginUser(email, password);
+    const data:any = await loginUser(email, password);
+
     return res.status(data.status).json({
       success: data.success,
       message: data.message || 'Login successful',
-      status: data.status || 200,
-      data: data || null,  
-    
-    });;
+      data: data.data || null,   // use `data.data` from successResponse/errorResponse
+    });
   } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
+    return res.status(500).json({ success: false, message: (error as Error).message });
   }
 };
+
 
 
 export const getAllEmployeesController = async (req: Request, res: Response) => {
