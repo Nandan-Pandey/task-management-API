@@ -6,7 +6,7 @@ export interface ISubtask extends Document {
   description: string;
   dueDate?: Date;
   priority?: string;
-  assignees: Types.ObjectId[];
+  assignees?: Types.ObjectId[];
   status: string;
   storyPoints?: number;
   statusHistory: { from: string; to: string; timestamp: Date }[];
@@ -45,5 +45,7 @@ const subtaskSchema = new Schema<ISubtask>({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+
 
 export const SubtaskModel = model<ISubtask>('Subtask', subtaskSchema);

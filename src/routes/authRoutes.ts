@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { getAllEmployees, login } from '../controllers/authController';
+import {getAllEmployeesController , login } from '../controllers/authController';
 
 
 const router = Router();
 
 router.post('/login', login);
-router.post('/userMaster', getAllEmployees);
+router.get('/userMaster', getAllEmployeesController);
 
 export default router;

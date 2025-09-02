@@ -1,65 +1,49 @@
 import { Router } from 'express';
-import { assignSubtaskUsers, createTaskS, getAllTasksWithSubtaskTitles, getTaskWithSubtasks } from '../controllers/taskController';
+import {  assignTask, createTaskController,  deleteTask,  getAllTasksWithSubtaskTitlesController,  getTaskWithSubtasksController, updateTaskWithSubtasksController } from '../controllers/taskController';
+import { autoSubtaskGen, processStory } from '../controllers/AI';
 
 
 
 const router = Router();
 
-router.post('/createTask', async (req, res, next) => {
+
+router.post("/createTask", createTaskController);
+
+router.get("/allTasks", getAllTasksWithSubtaskTitlesController);
+
+router.get("/:id", getTaskWithSubtasksController);
+
+router.delete("/:id", deleteTask);
+
+router.put("/updateTask/:id", assignTask);
+
+router.post("/AI/subtask", async (req, res, next) => {
   try {
-    const {  subtasks,...taskData } = req.body;
-    if (!taskData || !taskData.title || !taskData.description) {
-      return res.status(400).json({ error: 'Task title and description are required' });
+    const   description = req.body; // expecting { taskId: "123", description: "..." }
+    if ( !description) {
+      return res.status(400).json({ error: "taskId and description are required" });
     }
-    const result = await createTaskS(taskData, subtasks);
-    res.status(201).json(result);
+
+    const result = await autoSubtaskGen( description);
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
 });
 
-router.get('/Alltasks', async (req, res, next) => {
+router.post("/AI/story", async (req, res, next) => {
   try {
-    const tasksWithSubtaskTitles = await getAllTasksWithSubtaskTitles();
-    res.json(tasksWithSubtaskTitles);
+    const story  = req.body; // expecting { story: "string" }
+    if (!story || typeof story['user-story'] !== "string") {
+      return res.status(400).json({ error: "Story must be a valid string" });
+    }
+
+    const result = await processStory(story);
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
 });
-
-
-router.get('/:id', async (req, res, next) => {
-  try {
-    const taskId = req.params.id;
-    const taskWithSubtasks = await getTaskWithSubtasks(taskId);
-    if (!taskWithSubtasks) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    res.json(taskWithSubtasks);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// PUT /tasks/:id/assign - Assign task to users (update assignees)
-router.put('/:id/assign', async (req, res, next) => {
-  try {
-    const taskId = req.params.id;
-    const { assignees } = req.body;
-    if (!Array.isArray(assignees) || assignees.length === 0) {
-      return res.status(400).json({ error: 'Assignees must be a non-empty array' });
-    }
-    const updatedTask = await assignSubtaskUsers(taskId, assignees);
-    if (!updatedTask) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    res.json(updatedTask);
-  } catch (error) {
-    next(error);
-  }
-});
-
-
 
 
 

@@ -11,26 +11,31 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
   try {
     const { email, password } = req.body;
     const data = await loginUser(email, password);
-    res.json({ data });
+    return res.status(data.status).json({
+      success: data.success,
+      message: data.message || 'Login successful',
+      status: data.status || 200,
+      data: data || null,  
+    
+    });;
   } catch (error) {
-    res.status(401).json({ message: (error as Error).message });
+    res.status(500).json({ message: (error as Error).message });
   }
 };
 
 
-export const getAllEmployees = async (req: Request, res: Response) => {
+export const getAllEmployeesController = async (req: Request, res: Response) => {
   try {
-    const employees = await getAllEmployeesService();
-    res.status(200).json({
-      status: 200,
-      success: true,
-      data: employees,
-    });
+    const employeesResponse = await getAllEmployeesService();
+
+    // Send response as-is
+    return res.status(employeesResponse.status).json(employeesResponse);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: 500,
       success: false,
       message: (error as Error).message,
+      data: null,
     });
   }
 };

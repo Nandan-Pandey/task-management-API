@@ -41,4 +41,16 @@ const taskSchema = new Schema<ITask>({
   updatedAt: { type: Date, default: Date.now }
 });
 
-export const TaskModel = model<ITask>('Task', taskSchema);
+taskSchema.virtual("subtasks", {
+  ref: "Subtask",
+  localField: "_id",
+  foreignField: "parentTaskId"
+});
+
+// Keep virtuals in output
+taskSchema.set("toObject", { virtuals: true });
+taskSchema.set("toJSON", { virtuals: true });
+
+
+export const TaskModel = model<ITask>("Task", taskSchema);
+

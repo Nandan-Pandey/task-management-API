@@ -1,127 +1,97 @@
 import { Types } from "mongoose";
 import { ISubtask } from "../models/subtaskModel";
 import { ITask } from "../models/taskModel";
-import { createTask, getAllTasksWithSubtaskTitlesService } from "../services/maintask/mainTask";
-import { assignSubtaskUsersService, createSubtask, getSubtaskByIdService } from "../services/subTask/subTask";
+import {  createTaskService, deleteTaskRestrict, deleteTaskService, getAllTasksWithSubtaskTitlesService, getTaskWithSubtasksService, updateTaskWithSubtasksService } from "../services/maintask/mainTask";
+import {  assignTaskOrSubtaskService, createSubtask, getSubtaskByIdService } from "../services/subTask/subTask";
 import { getTaskByIdDao } from "../dao/maintask/maintaskDao";
-
-         
-
-
-
-const ALLOWED_STATUSES = ['To Do', 'In Progress', 'Done', 'Blocked'];
-const FIBONACCI_STORY_POINTS = [1, 2, 3, 5, 8, 13, 21];
-
-export const createTaskS = async (
-  taskData: Partial<ITask>,
-  subtasks?: Partial<ISubtask>[]
-): Promise<{
-  task: ISubtask;
-  subtasks: ISubtask[];
-}> => {
-  // Task validation
-  if (!taskData.title || !taskData.description) {
-    throw new Error('Title and description are required');
-  }
-
-  if (!taskData.assignees || taskData.assignees.length === 0) {
-    throw new Error('At least one assignee is required');
-  }
-
-  if (taskData.status && !ALLOWED_STATUSES.includes(taskData.status)) {
-    throw new Error(`Invalid status. Allowed: ${ALLOWED_STATUSES.join(', ')}`);
-  }
-
-  if (taskData.storyPoints !== undefined && !FIBONACCI_STORY_POINTS.includes(taskData.storyPoints)) {
-    throw new Error(`Story points must be one of: ${FIBONACCI_STORY_POINTS.join(', ')}`);
-  }
+import mongoose, { ClientSession } from "mongoose";
+import { errorResponse, successResponse } from "../utils/resp";
 
 
-  
-  // Initialize status history
-  taskData.statusHistory = [{
-    from: 'Created',
-    to: taskData?.status || 'To Do',
-    timestamp: new Date()
-  }];
+export const createTaskController = async (req: any, res:any, next: any) => {
+  try {
+    const { subtasks, ...taskData } = req.body;
 
-
-//   // Simulate notification
-//   const assigneeIds = taskData.assignees.map(a => a.toString());
-//   console.log(`Task '${taskData.title}' assigned to [${assigneeIds.join(', ')}] on ${new Date().toISOString()}`);
-
-  // Create Task
-  const createdTask:any = await createTask(taskData);
-
-  let createdSubtasks: any[] = [];
-
-  // Create Subtasks
-  if (subtasks && subtasks.length > 0) {
-    for (const subtaskData of subtasks) {
-      // Subtask must reference parentTaskId
-      subtaskData.parentTaskId = createdTask._id as Types.ObjectId;// Set parent task ID
-      // Subtask Validation
-      if (!subtaskData.title || !subtaskData.description) {
-        throw new Error('Each subtask requires a title and description');
-      }
-      if (!subtaskData.assignees || subtaskData.assignees.length === 0) {
-        throw new Error('Each subtask must have at least one assignee');
-      }
-      if (subtaskData.status && !ALLOWED_STATUSES.includes(subtaskData.status)) {
-        throw new Error(`Subtask status must be one of: ${ALLOWED_STATUSES.join(', ')}`);
-      }
-      if (subtaskData.storyPoints !== undefined && !FIBONACCI_STORY_POINTS.includes(subtaskData.storyPoints)) {
-        throw new Error(`Subtask story points must be one of: ${FIBONACCI_STORY_POINTS.join(', ')}`);
-      }
-      subtaskData.statusHistory = [{
-        from: 'Created',
-        to: subtaskData.status || 'To Do',
-        timestamp: new Date()
-      }];
-      subtaskData.createdAt = new Date();
-      subtaskData.updatedAt = new Date();
-
-      // Simulate notification
-      const subAssignees = subtaskData.assignees.map(a => a.toString());
-      console.log(`Subtask '${subtaskData.title}' assigned to [${subAssignees.join(', ')}] on ${new Date().toISOString()}`);
-
-      // Save subtask
-      const createdSubtask = await createSubtask(subtaskData);
-      createdSubtasks.push(createdSubtask);
+    if (!taskData || !taskData.title || !taskData.description) {
+      return res
+        .status(400)
+        .json(errorResponse("Task title and description are required", 400));
     }
-  }
 
-  return { task: createdTask, subtasks: createdSubtasks };
-};
+    const result = await createTaskService(taskData, subtasks);
+    return res.status(result.status).json(result);
 
-
-export const getAllTasksWithSubtaskTitles = async () => {
-  try {
-    return await getAllTasksWithSubtaskTitlesService();
-  } catch (error) {
-    throw error;
+  } catch (error: any) {
+    return res.status(500).json(errorResponse(error.message, 500, error));
   }
 };
-
-export const getTaskWithSubtasks = async (taskId: any) => {
+export const getAllTasksWithSubtaskTitlesController = async (
+  req: Request,
+  res: any,
+  next: any
+) => {
   try {
+    const result = await getAllTasksWithSubtaskTitlesService();
+    return res.status(result.status).json(result);
+  } catch (error: any) {
+    return res.status(500).json(errorResponse(error.message, 500, error));
+  }
+};
+export const updateTaskWithSubtasksController = async (
+  req: any,
+  res: any,
+  next: any
+) => {
+  try {
+    const taskId = req.params.id;
+    const { subtasks, ...taskData } = req.body;
 
-    const task = await getTaskByIdDao(taskId);
-    if (!task) return null;
-    const subtasks = await getSubtaskByIdService(task);
-    return subtasks;
+ 
+
+    const result = await updateTaskWithSubtasksService(taskId, taskData, subtasks);
+    return res.status(result.status).json(result);
+  } catch (error: any) {
+    return res.status(500).json(errorResponse(error.message, 500, error));
+  }
+};
+export const getTaskWithSubtasksController = async (
+  req: any,
+  res: any,
+  next: any
+) => {
+  try {
+    const taskId = req.params.id;
+    const response = await getTaskWithSubtasksService(taskId);
+    res.status(response.status).json(response);
   } catch (error) {
-    throw error;
+    next(error);
   }
 };
 
-
-export const assignSubtaskUsers = async (taskId: string, assignees: string[]) => {
+export const deleteTask = async (req: any, res: any, next: any) => {
   try {
-    // Validation can be added here if needed
-    const updatedTask = await assignSubtaskUsersService(taskId, assignees);
-    return updatedTask;
+    const { id } = req.params;
+    const { strategy } = req.query; // cascade | restrict
+
+    const response = await deleteTaskService(id, strategy as string);
+    return res.status(response.status).json(response);
   } catch (error) {
-    throw error;
+    next(error);
+  }
+};
+
+export const assignTask = async (req: any, res: any, next: any) => {
+  try {
+    const taskId = req.params.id;
+    const { assignees, status } = req.body;
+
+    if ((!Array.isArray(assignees) || assignees.length === 0) && !status) {
+      return res.status(400).json(errorResponse("Assignees or status is required"));
+    }
+
+    const response = await assignTaskOrSubtaskService(taskId, { assignees, status });
+    return res.status(response.status).json(response);
+  } catch (error) {
+    next(error);
   }
 };
