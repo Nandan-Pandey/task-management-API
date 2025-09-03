@@ -58,6 +58,9 @@ export const createTaskService = async (
 
   try {
     await session.withTransaction(async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // compare only date, not time
+
       // 1) Validate Task
       if (!taskData.assignees || taskData.assignees.length === 0) {
         throw new Error("At least one assignee is required");
@@ -74,6 +77,14 @@ export const createTaskService = async (
         );
       }
 
+      // Validate main task due date
+      if (taskData.dueDate) {
+        const taskDue = new Date(taskData.dueDate);
+        if (taskDue < today) {
+          throw new Error("Task due date cannot be in the past");
+        }
+      }
+
       taskData.statusHistory = [
         { from: "Created", to: taskData.status || "To Do", timestamp: new Date() },
       ];
@@ -86,12 +97,28 @@ export const createTaskService = async (
       if (subtasks?.length) {
         for (const s of subtasks) {
           s.parentTaskId = new Types.ObjectId(createdTask._id);
+
+          // Validate subtask assignees
           if (!s.assignees || s.assignees.length === 0) {
             throw new Error("Each subtask must have at least one assignee");
           }
           if (s.status && !ALLOWED_STATUSES.includes(s.status)) {
             throw new Error(`Invalid status for subtask. Allowed: ${ALLOWED_STATUSES.join(", ")}`);
           }
+
+          // Validate subtask due date
+          if (s.dueDate) {
+            const subtaskDue = new Date(s.dueDate);
+            const mainTaskDue = taskData.dueDate ? new Date(taskData.dueDate) : null;
+
+            if (subtaskDue < today) {
+              throw new Error(`Subtask "${s.title}" due date cannot be in the past`);
+            }
+            if (mainTaskDue && subtaskDue > mainTaskDue) {
+              throw new Error(`Subtask "${s.title}" due date cannot exceed main task due date`);
+            }
+          }
+
           s.statusHistory = [
             { from: "Created", to: s.status || "To Do", timestamp: new Date() },
           ];
@@ -116,6 +143,7 @@ export const createTaskService = async (
     session.endSession();
   }
 };
+
 
 export const getAllTasksWithSubtaskTitlesService = async () => {
   try {
